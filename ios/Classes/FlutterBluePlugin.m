@@ -95,6 +95,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
       uuids = [uuids arrayByAddingObject:[CBUUID UUIDWithString:u]];
     }
     // TODO: iOS Scan Options (#35)
+    CBPeripheral *peripheral = [self findPeripheral:remoteId];
     [self->_centralManager scanForPeripheralsWithServices:uuids options:nil];
     result(nil);
   } else if([@"stopScan" isEqualToString:call.method]) {
@@ -247,6 +248,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 - (CBPeripheral*)findPeripheral:(NSString*)remoteId {
   NSArray<CBPeripheral*> *peripherals = [_centralManager retrievePeripheralsWithIdentifiers:@[[[NSUUID alloc] initWithUUIDString:remoteId]]];
   CBPeripheral *peripheral;
+  NSLog(@"findPeripheral peripherals size: %d", [peripherals count]);
   for(CBPeripheral *p in peripherals) {
     if([[p.identifier UUIDString] isEqualToString:remoteId]) {
       peripheral = p;
