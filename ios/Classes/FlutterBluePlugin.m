@@ -38,6 +38,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 @property(nonatomic) NSMutableArray *servicesThatNeedDiscovered;
 @property(nonatomic) NSMutableArray *characteristicsThatNeedDiscovered;
 @property(nonatomic) LogLevel logLevel;
+@property(nonatomic) CBPeripheral *peripheral;
 @end
 
 @implementation FlutterBluePlugin
@@ -90,6 +91,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     ProtosScanSettings *request = [[ProtosScanSettings alloc] initWithData:[data data] error:nil];
     // UUID Service filter
     NSArray *uuids = [NSArray array];
+    NSLog(@"startScan uuids size: %d", [uuids count]);
     for (int i = 0; i < [request serviceUuidsArray_Count]; i++) {
       NSString *u = [request.serviceUuidsArray objectAtIndex:i];
       uuids = [uuids arrayByAddingObject:[CBUUID UUIDWithString:u]];
@@ -111,14 +113,21 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     ProtosConnectRequest *request = [[ProtosConnectRequest alloc] initWithData:[data data] error:nil];
     NSString *remoteId = [request remoteId];
     @try {
-      CBPeripheral *peripheral = [_scannedPeripherals objectForKey:remoteId];
+      CBPeripheral *peripheral = [self findPeripheral:remoteId];
+      //CBPeripheral *peripheral = [_scannedPeripherals objectForKey:remoteId];
+      NSLog(@"connect findPeripheral peripheral ");
+      if(peripheral == nil) {
+        NSLog(@"connect _scannedPeripherals peripheral ");
+        peripheral = [_scannedPeripherals objectForKey:remoteId];
+      }
       if(peripheral == nil) {
         @throw [FlutterError errorWithCode:@"connect"
                                    message:@"Peripheral not found"
                                    details:nil];
       }
       // TODO: Implement Connect options (#36)
-      [_centralManager connectPeripheral:peripheral options:nil];
+      self.peripheral = peripheral;
+      [_centralManager connectPeripheral:self.peripheral options:nil];
       result(nil);
     } @catch(FlutterError *e) {
       result(e);
@@ -126,8 +135,11 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
   } else if([@"disconnect" isEqualToString:call.method]) {
     NSString *remoteId = [call arguments];
     @try {
+      self.peripheral = nil;
       CBPeripheral *peripheral = [self findPeripheral:remoteId];
-      [_centralManager cancelPeripheralConnection:peripheral];
+      self.peripheral = peripheral;
+      [_centralManager cancelPeripheralConnection:self.peripheral];
+      self.peripheral = nil;
       result(nil);
     } @catch(FlutterError *e) {
       result(e);
